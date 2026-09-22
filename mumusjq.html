@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的歌单 · 数据结构作业一</title>
+<style>
+  :root{
+    --bg:#0b0e1a; --panel:#141828; --panel2:#1c2238; --line:#2a3252;
+    --txt:#e8ecf5; --mut:#8b93b0; --mut2:#5c6680; --accent:#6ea8ff; --accent2:#9b6bff;
+    --good:#3ddc97; --bad:#ff6b6b; --warn:#ffc857; --play:#1ed760;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--txt);line-height:1.5}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 18px 60px}
+  h1{font-size:22px;margin:0;display:flex;align-items:center;gap:10px}
+  .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:18px}
+  .sub{color:var(--mut);font-size:12.5px;margin:2px 0 0 44px}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+
+  .seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+  .seg button{border:none;background:transparent;color:var(--mut);padding:8px 16px;border-radius:7px;font-size:13.5px;cursor:pointer;font-weight:600}
+  .seg button.on{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+  .implbox{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+  .implbox .lbl{font-size:12px;color:var(--mut)}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11.5px;font-weight:600}
+  .b-good{background:rgba(61,220,151,.15);color:var(--good)}
+  .b-bad{background:rgba(255,107,107,.15);color:var(--bad)}
+  .b-warn{background:rgba(255,200,87,.15);color:var(--warn)}
+  .b-accent{background:rgba(110,168,255,.18);color:var(--accent)}
+
+  .layout{display:grid;grid-template-columns:1fr 320px;gap:14px}
+  @media(max-width:880px){.layout{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .card h2{font-size:14px;margin:0 0 10px;color:var(--mut);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+
+  /* 工具栏 */
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+  input[type=text],input[type=number]{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 10px;font-size:13px;font-family:var(--mono)}
+  input[type=text]{width:170px}
+  input[type=number]{width:70px}
+  button{cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:13px;transition:.12s}
+  button:hover{border-color:var(--accent);color:#fff}
+  button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-color:transparent;font-weight:600}
+  button.danger:hover{border-color:var(--bad);color:var(--bad)}
+  .stat{font-size:12.5px;color:var(--mut)}
+  .stat b{color:var(--txt)}
+  code,.mono{font-family:var(--mono);font-size:12.5px;background:var(--panel2);padding:1px 6px;border-radius:4px}
+
+  /* 歌单列表 */
+  .listhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .vp{position:relative;height:430px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#0e1220}
+  .vp::-webkit-scrollbar{width:10px}
+  .vp::-webkit-scrollbar-thumb{background:#2a3252;border-radius:5px}
+  .spacer{height:0}
+  .row{display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;border-bottom:1px solid #161b2e;font-size:13.5px}
+  .row:hover{background:#1a2038}
+  .row.playing{background:rgba(30,215,96,.10)}
+  .row.playing .name{color:var(--play);font-weight:600}
+  .row.dragover{outline:2px dashed var(--accent);outline-offset:-2px}
+  .row .idx{width:46px;color:var(--mut);font-family:var(--mono);text-align:right;font-size:12px}
+  .row .handle{cursor:grab;color:#5c6680;opacity:.6;font-size:15px}
+  .row .handle:hover{opacity:1}
+  .row .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .play{color:var(--play);background:none;border:none;font-size:15px;cursor:pointer;padding:2px 6px;opacity:.8}
+  .row .play:hover{opacity:1}
+  .row .del{color:var(--mut);background:none;border:none;font-size:14px;cursor:pointer;padding:2px 6px}
+  .row .del:hover{color:var(--bad)}
+  .empty{padding:40px;text-align:center;color:var(--mut);font-size:13px}
+
+  /* 侧栏 */
+  .side .card{margin-bottom:14px}
+  .cx{font-size:12.5px;color:var(--mut)}
+  table.cx{width:100%;border-collapse:collapse;margin-top:6px}
+  table.cx th,table.cx td{border:1px solid var(--line);padding:5px 7px;text-align:center;font-size:12px}
+  table.cx th{background:var(--panel2);color:var(--mut)}
+  table.cx td.m{font-family:var(--mono)}
+  .log{font-family:var(--mono);font-size:12px;line-height:1.7;max-height:260px;overflow:auto}
+  .log .ln{display:flex;gap:8px;border-bottom:1px solid #161b2e;padding:3px 0}
+  .log .t{color:#5c6680;flex-shrink:0}
+  .log .op{color:var(--accent);flex-shrink:0}
+  .log .r{color:var(--good);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .log .ms{color:var(--warn);flex-shrink:0}
+  .log .im{color:#5c6680;flex-shrink:0;font-size:11px}
+  .log .empty{padding:10px 0}
+
+  /* 标签页 */
+  .tabs{display:flex;gap:6px;margin:18px 0 10px;border-bottom:1px solid var(--line);padding-bottom:0}
+  .tabs button{border:none;background:transparent;color:var(--mut);padding:8px 16px;border-radius:8px 8px 0 0;font-size:14px;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tabs button.on{color:var(--txt);border-bottom-color:var(--accent)}
+  .tabpage{display:none}
+  .tabpage.on{display:block}
+
+  table.bench{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  table.bench th,table.bench td{border:1px solid var(--line);padding:6px 9px;text-align:center}
+  table.bench th{background:var(--panel2);color:var(--mut)}
+  table.bench td.m{font-family:var(--mono)}
+  .fb{padding:10px 12px;border-left:3px solid var(--accent);background:var(--panel2);border-radius:0 8px 8px 0;margin:8px 0}
+  .fb .t{font-weight:600;margin-bottom:2px}
+  ul{margin:6px 0;padding-left:22px} li{margin:3px 0}
+
+  /* 遮罩 */
+  .overlay{position:fixed;inset:0;background:rgba(8,11,20,.7);display:none;align-items:center;justify-content:center;z-index:50}
+  .overlay.on{display:flex}
+  .ovbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 34px;text-align:center;min-width:240px}
+  .spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;margin:0 auto 12px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .ovtxt{font-size:14px;color:var(--txt)}
+  .ovsub{font-size:12px;color:var(--mut);margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 顶栏 -->
+  <div class="topbar">
+    <div>
+      <h1><span class="logo">🎵</span> 我的歌单</h1>
+      <p class="sub">校园音乐 · 数据结构作业一 · 顺序表 SqList vs 链表 LinkList</p>
+    </div>
+    <div class="implbox">
+      <span class="lbl">底层实现（可切换）</span>
+      <div class="seg" id="implSeg">
+        <button class="on" data-impl="sq">SqList 顺序表</button>
+        <button data-impl="link">LinkList 链表</button>
+      </div>
+      <div id="implTags"></div>
+    </div>
+  </div>
+
+  <!-- 主体：歌单 + 侧栏 -->
+  <div class="layout">
+    <!-- 歌单 -->
+    <div class="card">
+      <h2>歌单</h2>
+
+      <div class="toolbar">
+        <input id="genN" type="number" value="100000" min="0" step="100" title="数据量">
+        <button class="primary" id="genBtn">随机生成歌单</button>
+        <span class="stat" id="genState">尚未生成</span>
+      </div>
+
+      <div class="toolbar">
+        <input id="addName" type="text" placeholder="输入歌名添加">
+        <input id="addPos" type="number" value="0" min="0" title="插入位置">
+        <button id="addTop">添加到顶部</button>
+        <button id="addPosBtn">插入到位置 i</button>
+        <button id="addEnd">添加到末尾</button>
+      </div>
+
+      <div class="toolbar">
+        <input id="searchName" type="text" placeholder="按歌名查找">
+        <button id="searchBtn">查找</button>
+        <button id="jumpFirst">⏮ 跳到第 1 首</button>
+        <button id="jumpLast">⏭ 跳到最后一首</button>
+        <span class="stat" id="playStat" style="margin-left:auto"></span>
+      </div>
+
+      <div class="listhead">
+        <span class="stat">共 <b id="countAll">0</b> 首　<span style="color:var(--mut2)">拖动 ☰ 可排序</span></span>
+        <span class="stat" id="viewRange"></span>
+      </div>
+      <div class="vp" id="vp">
+        <div class="spacer" id="topSp"></div>
+        <div id="rows"></div>
+        <div class="spacer" id="botSp"></div>
+        <div class="empty" id="emptyHint">点击「随机生成歌单」开始（默认 10 万首真实数据）</div>
+      </div>
+      <p class="stat" style="margin-top:8px;color:var(--mut)">列表渲染用快照保证流畅；所有增删查改/跳播均走真实 SqList/LinkList 并在右侧「操作用时」实时报耗时。</p>
+    </div>
+
+    <!-- 侧栏 -->
+    <div class="side">
+      <div class="card">
+        <h2>实现细节</h2>
+        <div class="cx" id="implDetail"></div>
+        <table class="cx" id="cxTable">
+          <thead><tr><th>操作</th><th>SqList</th><th>LinkList</th></tr></thead>
+          <tbody>
+            <tr><td>get(i)</td><td class="m b-good">O(1)</td><td class="m b-bad">O(n)</td></tr>
+            <tr><td>insert(i)</td><td class="m b-bad">O(n)</td><td class="m b-good">O(1)</td></tr>
+            <tr><td>remove(i)</td><td class="m b-bad">O(n)</td><td class="m b-good">O(1)</td></tr>
+            <tr><td>indexOf</td><td class="m b-bad">O(n)</td><td class="m b-bad">O(n)</td></tr>
+            <tr><td>size()</td><td class="m b-good">O(1)</td><td class="m b-good">O(1)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>操作用时（随你的操作实时刷新）</h2>
+        <div class="log" id="log"><div class="empty">尚无操作。点击歌曲播放、添加、删除、查找或拖拽排序，每一步的函数名与耗时都会显示在此。</div></div>
+        <div style="text-align:right;margin-top:6px"><button id="clearLog" style="font-size:12px">清空日志</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 标签页：基准测试 / 问题分析 -->
+  <div class="tabs" id="tabs">
+    <button class="on" data-tab="bench">基准测试</button>
+    <button data-tab="analysis">问题分析</button>
+  </div>
+
+  <div class="tabpage on" id="tab-bench">
+    <div class="card">
+      <p class="cx">对 get / insert / remove / indexOf 四个操作，在 n = 100 / 1,000 / 10,000 / 100,000 四档规模上计时（单位 ms）。
+      为对应反馈场景，测试位置取 <code>get(n−1)</code>（跳到最后一首）、<code>insert(3)</code>/<code>remove(3)</code>（第 3 首后增删）、<code>indexOf(last)</code>（查最后一首）。</p>
+      <div class="toolbar">
+        <button class="primary" id="benchBtn">运行基准测试</button>
+        <span class="stat" id="benchState">未运行</span>
+      </div>
+      <h2 style="margin-top:14px">SqList 顺序表 — 好查不好改</h2>
+      <table class="bench" id="tSq">
+        <thead><tr><th>操作</th><th>n=100</th><th>n=1,000</th><th>n=10,000</th><th>n=100,000</th></tr></thead>
+        <tbody>
+          <tr><td>get(n-1)</td><td class="m">-</td><td class="m">-</td><td class="m">-</td><td class="m">-</td></tr>
+          <tr><td>insert(3)</td><td class="m">-</td><td class="m">-</td><td class="m">-</td><td class="m">-</td></tr>
+          <tr><td>remove(3)</td><td class="m">-</td><td class="m">-</td><td class="m">-</td><td class="m">-</td></tr>
+          <tr><td>indexOf(last)</td><td class="m">-</td><td class="m">-</td><td class="m">-</td><td class="m">-</td></tr>
+        </tbody>
+      </table>
+      <h2 style="margin-top:14px">LinkList 链表 — 好改不好查</h2>
+      <table class="bench" id="tLink">
+        <thead><tr><th>操作</th><th>n=100</th><th>n=1,000</th><th>n=10,000</th><th>n=100,000</th></tr></thead>
+        <tbody>
+          <tr><td>get(n-1)</td><td class="m">-</td><td class="m">-</td><td class="m">-</td><td class="m">-</td></tr>
+          <tr><td>insert(3)</td><td class="m">-</td><td class="m">-</td><td class="m">-</td><td class="m">-</td></tr>
+          <tr><td>remove(3)</td><td class="m">-</td><td class="m">-</td><td class="m">-</td><td class="m">-</td></tr>
+          <tr><td>indexOf(last)</td><td class="m">-</td><td class="m">-</td><td class="m">-</td><td class="m">-</td></tr>
+        </tbody>
+      </table>
+      <p class="cx" style="margin-top:8px">注：get/indexOf 非破坏操作，多次循环取平均；insert/remove 在第 3 位对称，采用「插入后立即删除」成对计时÷2 得单次估计（保持 size 恒定）。&lt;0.01 表示低于计时分辨率。</p>
+    </div>
+  </div>
+
+  <div class="tabpage" id="tab-analysis">
+    <div class="card">
+      <p>对照基准实测数据，可判定当前线上 App 用的是 <span class="b-warn badge">SqList 顺序表</span>。四条反馈逐一对应：</p>
+      <div class="fb"><div class="t">反馈① 拖动排序卡顿，2000 首拖不动</div>
+        拖拽 = 连续大量 <code>remove</code>+<code>insert</code>。SqList 每次搬动 i 之后全部元素，单次 O(n)，连续拖拽累积卡顿。<span class="b-bad badge">不好改</span></div>
+      <div class="fb"><div class="t">反馈② 跳到第 1 首 / 第 1500 首都瞬间</div>
+        SqList <code>get(i)</code> 下标随机访问 O(1)，与 i 无关 → 实测 get(n−1) 始终接近 0。这正是顺序表强项 <span class="b-good badge">好查</span>，也反向印证用的是顺序表。</div>
+      <div class="fb"><div class="t">反馈③ 第 3 首后插入，歌单越长越慢</div>
+        SqList <code>insert(3)</code> 需把第 3 首之后 n−3 个元素整体后移，n 越大搬得越多 → 随 n 线性增长；LinkList 只走 3 步重连指针，与 n 无关 → 实测恒定。即"顺序表好查不好改，链表好改不好查"。</div>
+      <div class="fb"><div class="t">反馈④ 偶发闪退，日志反复越界</div>
+        <code>get/remove(i)</code> 当 <code>i≥size</code> 或 <code>i&lt;0</code> 时访问越界抛异常 → 必须入口做边界校验。本页所有越界操作会即时弹窗报错而非闪退。</div>
+      <h2 style="margin-top:14px">建议</h2>
+      <ul>
+        <li>读多写少、靠随机跳播（点歌、跳到第 N 首）→ 保持 <b>SqList</b>，get 是 O(1)。</li>
+        <li>头/中部频繁插入删除（拖拽排序、插队播放）→ 用 <b>LinkList</b>，或拖拽时只记录意图、松手一次性 reorder。</li>
+        <li>所有 get/insert/remove 入口先校验 <code>0≤i≤size</code>，杜绝越界闪退。</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="cx" style="text-align:center;margin-top:24px;color:var(--mut)">数据结构作业一 · 顺序表 SqList vs 链表 LinkList · 真实 10 万条数据实测</p>
+</div>
+
+<!-- 遮罩 -->
+<div class="overlay" id="overlay">
+  <div class="ovbox">
+    <div class="spin"></div>
+    <div class="ovtxt" id="ovTxt">处理中…</div>
+    <div class="ovsub" id="ovSub"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   两套线性表实现（统一接口），边界校验杜绝越界闪退
+   ============================================================ */
+class SqList{                       // 顺序表：连续数组
+  constructor(){ this._a=[]; }
+  get(i){ if(i<0||i>=this._a.length) throw new RangeError("SqList 越界 get("+i+")"); return this._a[i]; }            // O(1)
+  insert(i,s){ if(i<0||i>this._a.length) throw new RangeError("SqList 越界 insert("+i+")");
+    for(let k=this._a.length;k>i;k--) this._a[k]=this._a[k-1]; this._a[i]=s; }                                          // O(n) 后移
+  remove(i){ if(i<0||i>=this._a.length) throw new RangeError("SqList 越界 remove("+i+")");
+    const r=this._a[i]; for(let k=i;k<this._a.length-1;k++) this._a[k]=this._a[k+1]; this._a.length--; return r; }      // O(n) 前移
+  indexOf(name){ for(let k=0;k<this._a.length;k++) if(this._a[k]===name) return k; return -1; }                        // O(n)
+  size(){ return this._a.length; }                                                                                     // O(1)
+  toArray(){ return this._a.slice(); }
+}
+class _Node{ constructor(s){ this.s=s; this.next=null; } }
+class LinkList{                     // 链表：结点+指针，带 head/tail
+  constructor(){ this.head=null; this.tail=null; this._n=0; }
+  get(i){ if(i<0||i>=this._n) throw new RangeError("LinkList 越界 get("+i+")");
+    let p=this.head,k=0; while(p&&k<i){p=p.next;k++;} return p.s; }                                                    // O(n)
+  insert(i,s){ if(i<0||i>this._n) throw new RangeError("LinkList 越界 insert("+i+")");
+    const node=new _Node(s);
+    if(i===0){ node.next=this.head; this.head=node; if(!this.tail)this.tail=node; }
+    else if(i===this._n){ this.tail.next=node; this.tail=node; }                                                       // O(1) 尾插
+    else { let p=this.head,k=0; while(p&&k<i-1){p=p.next;k++;} node.next=p.next; p.next=node; }                         // O(1) 重连（含遍历到 i-1）
+    this._n++;
+  }
+  remove(i){ if(i<0||i>=this._n) throw new RangeError("LinkList 越界 remove("+i+")");
+    let r;
+    if(i===0){ r=this.head.s; this.head=this.head.next; if(!this.head)this.tail=null; }
+    else { let p=this.head,k=0; while(p&&k<i-1){p=p.next;k++;} r=p.next.s; p.next=p.next.next; if(!p.next)this.tail=p; }
+    this._n--; return r;
+  }
+  indexOf(name){ let p=this.head,k=0; while(p){ if(p.s===name)return k; p=p.next; k++; } return -1; }                   // O(n)
+  size(){ return this._n; }
+  toArray(){ const r=[];let p=this.head; while(p){r.push(p.s);p=p.next;} return r; }
+}
+
+/* ============================================================ 状态 ============================================================ */
+const $=id=>document.getElementById(id);
+let curImpl="sq", curList=new SqList();
+let viewCache=[];                  // 渲染快照（保证 10 万条也能流畅滚动）
+let nowPlaying=-1, highlightIdx=-1;
+const NAMES=["夜曲","晴天","稻香","七里香","青花瓷","告白气球","简单爱","听妈妈的话","蜗牛","龙卷风","安静","退后","搁浅","彩虹","一路向北","蒲公英的约定","不能说的秘密","Mojito","红颜如霜","倒影","兰亭序","反方向的钟","七里香","搁浅"];
+
+/* 计时 */
+const perf=()=>performance.now();
+function timeOnce(fn){ const t=perf(); const r=fn(); return {r, ms:perf()-t}; }
+
+/* 日志 */
+const logArr=[];
+function log(op, detail, ms){
+  const ts=new Date(); const t=String(ts.getHours()).padStart(2,'0')+":"+String(ts.getMinutes()).padStart(2,'0')+":"+String(ts.getSeconds()).padStart(2,'0');
+  logArr.unshift({t, op, detail, ms, impl:curImpl==="sq"?"Sq":"Link"});
+  if(logArr.length>40) logArr.pop();
+  renderLog();
+}
+function renderLog(){
+  const el=$("log");
+  if(!logArr.length){ el.innerHTML='<div class="empty">尚无操作。点击歌曲播放、添加、删除、查找或拖拽排序，每一步的函数名与耗时都会显示在此。</div>'; return; }
+  el.innerHTML=logArr.map(o=>
+    `<div class="ln"><span class="t">${o.t}</span><span class="op">${o.op}</span><span class="r">${o.detail}</span><span class="ms">${o.ms}</span><span class="im">[${o.impl}]</span></div>`
+  ).join("");
+}
+$("clearLog").onclick=()=>{ logArr.length=0; renderLog(); };
+const fmt=ms=> ms<0.01?"<0.01":(ms<1?ms.toFixed(3):(ms<100?ms.toFixed(2):ms.toFixed(1)));
+
+/* 遮罩 */
+function showOv(txt,sub){ $("ovTxt").textContent=txt; $("ovSub").textContent=sub||""; $("overlay").classList.add("on"); }
+function hideOv(){ $("overlay").classList.remove("on"); }
+const tick=()=>new Promise(r=>setTimeout(r,30));
+
+/* 实现说明 */
+function updateImplUI(){
+  const sq=curImpl==="sq";
+  document.querySelectorAll("#implSeg button").forEach(b=>b.classList.toggle("on", b.dataset.impl===curImpl));
+  $("implTags").innerHTML = sq
+    ? '<span class="b-good badge">get O(1) 好查</span> <span class="b-bad badge">insert/remove O(n) 不好改</span>'
+    : '<span class="b-good badge">insert/remove O(1) 好改</span> <span class="b-bad badge">get O(n) 不好查</span>';
+  $("implDetail").innerHTML = sq
+    ? "<b>SqList 顺序表</b>：元素存于连续内存。<code>get(i)</code> 直接下标 = O(1)；<code>insert/remove(i)</code> 需搬动 i 之后全部元素 = O(n)。"
+    : "<b>LinkList 链表</b>：结点靠指针串联。<code>get(i)</code> 从头遍历 = O(n)；<code>insert/remove(i)</code> 走到 i−1 后只重连指针 = O(1)。";
+}
+
+/* ============================================================ 歌单 UI（虚拟列表） ============================================================ */
+const ROW_H=44, VP_H=430, RENDER=14;
+const vp=$("vp"), rowsEl=$("rows"), topSp=$("topSp"), botSp=$("botSp");
+
+function genNames(n){ const a=new Array(n); for(let i=0;i<n;i++) a[i]=NAMES[(Math.random()*NAMES.length)|0]+"-"+(1000+((Math.random()*9000)|0)); return a; }
+
+function buildList(impl, names){
+  const L = impl==="sq" ? new SqList() : new LinkList();
+  for(const s of names) L.insert(L.size(), s);   // 尾插：两结构均 O(1)
+  return L;
+}
+
+function renderVisible(){
+  const size=viewCache.length;
+  $("countAll").textContent=size;
+  if(size===0){ rowsEl.innerHTML=""; topSp.style.height=0; botSp.style.height=0; $("emptyHint").style.display="block"; $("viewRange").textContent=""; return; }
+  $("emptyHint").style.display="none";
+  const st=vp.scrollTop;
+  let start=Math.max(0, Math.floor(st/ROW_H)-2);
+  const count=Math.min(RENDER, size-start);
+  const end=start+count;
+  topSp.style.height=(start*ROW_H)+"px";
+  botSp.style.height=Math.max(0,(size-end)*ROW_H)+"px";
+  $("viewRange").textContent = `显示 ${start+1}–${end} / ${size}`;
+  let html="";
+  for(let i=start;i<end;i++){
+    const playing=i===nowPlaying;
+    const hl=i===highlightIdx;
+    html+=`<div class="row ${playing?'playing':''} ${hl?'dragover':''}" data-i="${i}" draggable="true">
+      <span class="handle" title="拖动排序">☰</span>
+      <span class="idx">${i}</span>
+      <span class="name">${escapeHtml(viewCache[i])}</span>
+      <button class="play" data-act="play">▶</button>
+      <button class="del" data-act="del">✕</button>
+    </div>`;
+  }
+  rowsEl.innerHTML=html;
+}
+function escapeHtml(s){ return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+vp.addEventListener("scroll", ()=>renderVisible(), {passive:true});
+
+/* 行交互：点击=播放(get)，删除=remove，拖拽=reorder */
+rowsEl.addEventListener("click", e=>{
+  const row=e.target.closest(".row"); if(!row) return;
+  const i=+row.dataset.i;
+  if(e.target.dataset.act==="del"){ doRemove(i); }
+  else { doPlay(i); }
+});
+
+/* 拖拽排序 */
+let dragFrom=-1;
+rowsEl.addEventListener("dragstart", e=>{
+  const row=e.target.closest(".row"); if(!row) return;
+  dragFrom=+row.dataset.i; e.dataTransfer.effectAllowed="move";
+});
+rowsEl.addEventListener("dragover", e=>{
+  e.preventDefault();
+  const row=e.target.closest(".row"); if(!row) return;
+  document.querySelectorAll(".row.dragover").forEach(r=>r.classList.remove("dragover"));
+  row.classList.add("dragover");
+});
+rowsEl.addEventListener("dragleave", e=>{
+  const row=e.target.closest(".row"); if(row) row.classList.remove("dragover");
+});
+rowsEl.addEventListener("drop", e=>{
+  e.preventDefault();
+  const row=e.target.closest(".row");
+  document.querySelectorAll(".row.dragover").forEach(r=>r.classList.remove("dragover"));
+  if(!row || dragFrom<0) return;
+  const to=+row.dataset.i;
+  doReorder(dragFrom, to);
+  dragFrom=-1;
+});
+
+/* ============================================================ 操作（走真实结构 + 计时 + 日志） ============================================================ */
+function doPlay(i){
+  if(curList.size()===0){ return; }
+  try{
+    const {r,ms}=timeOnce(()=>curList.get(i));
+    nowPlaying=i; renderVisible();
+    $("playStat").innerHTML=`正在播放 <b>#${i}</b> ${escapeHtml(r)}`;
+    log("get("+i+")", `→ "${r}"`, fmt(ms)+" ms");
+    scrollIntoView(i);
+  }catch(e){ alertErr(e); }
+}
+function doRemove(i){
+  try{
+    const {r,ms}=timeOnce(()=>curList.remove(i));
+    viewCache.splice(i,1);
+    if(nowPlaying===i) nowPlaying=-1; else if(nowPlaying>i) nowPlaying--;
+    renderVisible();
+    log("remove("+i+")", `→ "${r}"  size=${curList.size()}`, fmt(ms)+" ms");
+  }catch(e){ alertErr(e); }
+}
+function doInsert(i, song){
+  try{
+    const {ms}=timeOnce(()=>curList.insert(i, song));
+    viewCache.splice(i,0,song);
+    if(nowPlaying>=i) nowPlaying++;
+    renderVisible();
+    log("insert("+i+", \""+song+"\")", `成功  size=${curList.size()}`, fmt(ms)+" ms");
+    scrollIntoView(i);
+  }catch(e){ alertErr(e); }
+}
+function doSearch(name){
+  if(!name){ return; }
+  try{
+    const {r,ms}=timeOnce(()=>curList.indexOf(name));
+    if(r<0){ log("indexOf(\""+name+"\")", "未找到 -1", fmt(ms)+" ms"); $("playStat").textContent=`未找到「${name}」`; return; }
+    highlightIdx=r; nowPlaying=r;
+    renderVisible();
+    log("indexOf(\""+name+"\")", `→ ${r}`, fmt(ms)+" ms");
+    $("playStat").innerHTML=`找到 <b>#${r}</b> ${escapeHtml(name)}`;
+    scrollIntoView(r);
+    setTimeout(()=>{ highlightIdx=-1; renderVisible(); }, 1200);
+  }catch(e){ alertErr(e); }
+}
+function doJump(to){ if(curList.size()===0) return; doPlay(to); }
+function doReorder(from,to){
+  if(from===to) return;
+  try{
+    const t0=perf();
+    const song=curList.get(from);
+    curList.remove(from);
+    curList.insert(to, song);
+    const ms=perf()-t0;
+    // 同步快照
+    viewCache.splice(from,1);
+    viewCache.splice(to,0,song);
+    if(nowPlaying===from) nowPlaying=to;
+    renderVisible();
+    log("reorder("+from+"→"+to+")", `get+remove+insert  size=${curList.size()}`, fmt(ms)+" ms");
+    scrollIntoView(to);
+  }catch(e){ alertErr(e); }
+}
+function alertErr(e){ alert("操作异常（这就是反馈④的越界闪退根因）:\n"+e.message); log("异常", e.message, "-"); }
+
+function scrollIntoView(i){
+  vp.scrollTop=i*ROW_H;
+  renderVisible();
+}
+
+/* ============================================================ 按钮绑定 ============================================================ */
+$("genBtn").onclick=async()=>{
+  const n=Math.max(0,parseInt($("genN").value)||0);
+  showOv("正在生成歌单", `随机生成 ${n.toLocaleString()} 首歌名并装入 ${curImpl==="sq"?"SqList":"LinkList"}`);
+  await tick();
+  try{
+    const t0=perf();
+    const names=genNames(n);
+    curList=buildList(curImpl, names);
+    viewCache=names.slice();
+    const ms=perf()-t0;
+    nowPlaying=-1; vp.scrollTop=0;
+    renderVisible(); renderLog();
+    $("genState").textContent=`已生成 ${n.toLocaleString()} 首，装入 ${curImpl==="sq"?"SqList":"LinkList"}，${ms.toFixed(0)} ms`;
+    log("生成", `${n.toLocaleString()} 首 → size=${curList.size()}`, ms.toFixed(1)+" ms");
+  }catch(e){ alertErr(e); } finally { hideOv(); }
+};
+
+$("addTop").onclick=()=>doInsert(0, $("addName").value||("新歌-"+Date.now()));
+$("addEnd").onclick=()=>{ if(curList.size()===0){doInsert(0,$("addName").value||"新歌");return;} doInsert(curList.size(), $("addName").value||("新歌-"+Date.now())); };
+$("addPosBtn").onclick=()=>{ const i=Math.max(0,Math.min(parseInt($("addPos").value)||0, curList.size())); doInsert(i, $("addName").value||("新歌-"+Date.now())); };
+$("searchBtn").onclick=()=>doSearch($("searchName").value.trim());
+$("searchName").addEventListener("keydown",e=>{ if(e.key==="Enter") doSearch(e.target.value.trim()); });
+$("addName").addEventListener("keydown",e=>{ if(e.key==="Enter") $("addTop").click(); });
+$("jumpFirst").onclick=()=>{ if(curList.size()) doJump(0); };
+$("jumpLast").onclick=()=>{ if(curList.size()) doJump(curList.size()-1); };
+
+/* 切换实现：加遮罩 + 异步 yield，避免卡顿无提示 */
+document.querySelectorAll("#implSeg button").forEach(b=>{
+  b.onclick=async()=>{
+    if(b.dataset.impl===curImpl) return;
+    curImpl=b.dataset.impl;
+    showOv("正在切换底层实现", `迁移 ${curList.size().toLocaleString()} 首歌曲到 ${curImpl==="sq"?"SqList 顺序表":"LinkList 链表"}`);
+    await tick();
+    const data=curList.toArray();
+    curList = curImpl==="sq" ? new SqList() : new LinkList();
+    for(const s of data) curList.insert(curList.size(), s);
+    viewCache=data.slice();
+    updateImplUI(); renderVisible();
+    log("切换实现", `→ ${curImpl==="sq"?"SqList":"LinkList"}  size=${curList.size()}`, "-");
+    hideOv();
+  };
+});
+
+/* 标签页 */
+document.querySelectorAll("#tabs button").forEach(b=>{
+  b.onclick=()=>{ document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
+    document.querySelectorAll(".tabpage").forEach(p=>p.classList.toggle("on", p.id==="tab-"+b.dataset.tab)); };
+});
+
+/* ============================================================ 基准测试 ============================================================ */
+const SIZES=[100,1000,10000,100000], OPS=["get","insert","remove","indexOf"];
+function autoRepeat(n){ return n<=100?5000:(n<=1000?500:(n<=10000?50:1)); }
+function timeit(fn,R){ fn(); R=R||1; const t0=perf(); for(let k=0;k<R;k++) fn(); return (perf()-t0)/R; }
+
+async function runBench(){
+  $("benchBtn").disabled=true;
+  $("benchState").innerHTML='<span style="color:var(--accent)">运行中…</span>';
+  ["tSq","tLink"].forEach(tid=>document.querySelectorAll("#"+tid+" td").forEach(td=>td.textContent="-"));
+  showOv("运行基准测试","依次测量 SqList 与 LinkList × 4 操作 × 4 档规模…");
+  await tick();
+  const yield_=()=>new Promise(r=>setTimeout(r,0));
+  for(const impl of ["sq","link"]){
+    const tid=impl==="sq"?"tSq":"tLink";
+    for(let si=0;si<SIZES.length;si++){
+      const n=SIZES[si], names=genNames(n), last=names[n-1];
+      const row=op=>document.querySelector(`#${tid} tbody`).children[OPS.indexOf(op)].children[si+1];
+      // get(n-1)
+      let L=buildList(impl,names); row("get").textContent=fmt(timeit(()=>L.get(n-1),autoRepeat(n))); await yield_();
+      // indexOf(last)
+      L=buildList(impl,names); row("indexOf").textContent=fmt(timeit(()=>L.indexOf(last),autoRepeat(n))); await yield_();
+      // insert/remove 成对（保持 size 恒定）
+      L=buildList(impl,names);
+      const R=(n<=100?2000:(n<=1000?200:(n<=10000?20:2)));
+      const pair=timeit(()=>{ L.insert(3,"__b__"); L.remove(3); }, R);
+      row("insert").textContent=fmt(pair/2); row("remove").textContent=fmt(pair/2); await yield_();
+    }
+  }
+  hideOv();
+  $("benchBtn").disabled=false;
+  $("benchState").textContent="完成 ✓";
+}
+$("benchBtn").onclick=runBench;
+
+/* 初始化 */
+updateImplUI();
+renderVisible();
+renderLog();
+</script>
+</body>
+</html>
